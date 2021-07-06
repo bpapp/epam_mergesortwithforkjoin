@@ -4,23 +4,23 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-class ForkJoinMergeSort extends RecursiveTask {
+class ForkJoinMergeSort extends RecursiveTask<Void> {
 
     private Integer[] intArray;
 
-    private int lower, upper;
+    private int lowerIndex;
+    private int upperIndex;
 
-    public ForkJoinMergeSort(Integer[] intArray, Integer lower, Integer upper) {
+    public ForkJoinMergeSort(Integer[] intArray, Integer lowerIndex, Integer upperIndex) {
         this.intArray = intArray;
-        this.lower = lower;
-        this.upper = upper;
+        this.lowerIndex = lowerIndex;
+        this.upperIndex = upperIndex;
     }
 
     public Integer[] getIntArray() {
@@ -47,45 +47,45 @@ class ForkJoinMergeSort extends RecursiveTask {
     }
 
     @Override
-    protected Object compute() {
-        if (lower < upper) {
-            int mid = (lower + upper) / 2;
+    protected Void compute() {
+        if (lowerIndex < upperIndex) {
+            int mid = (lowerIndex + upperIndex) / 2;
 
-            ForkJoinMergeSort left = new ForkJoinMergeSort(intArray, lower, mid);
-            ForkJoinMergeSort right = new ForkJoinMergeSort(intArray, mid + 1, upper);
+            ForkJoinMergeSort left = new ForkJoinMergeSort(intArray, lowerIndex, mid);
+            ForkJoinMergeSort right = new ForkJoinMergeSort(intArray, mid + 1, upperIndex);
 
             invokeAll(left, right);
-            merge(intArray, lower, mid, upper);
+            merge(intArray, lowerIndex, mid, upperIndex);
         }
-        return Optional.empty();
+        return null;
     }
 }
 
 public class ForkJoinDemo {
 
-    public static void main(String[] args) {
-        Integer[] readInArray = readIn(args[0]);
+    public Integer[] startMergeAndSort(String fileName) {
+        Integer[] readInArray = readIn(fileName);
         ForkJoinPool pool = ForkJoinPool.commonPool();
         ForkJoinTask<?> task = new ForkJoinMergeSort(readInArray, 0, readInArray.length - 1);
         pool.invoke(task);
         pool.shutdown();
         printArray(readInArray);
+        return readInArray;
     }
 
-    private static Integer[] readIn(String fileName) {
-        Integer[] arr = null;
+    private Integer[] readIn(String fileName) {
+        Integer[] arr = new Integer[0];
         try (Stream<String> stream = Files.lines(Paths.get(fileName))) {
             arr = stream.
-                    mapToInt(value -> Integer.valueOf(value)).boxed().toArray(Integer[]::new);
-
+                    mapToInt(Integer::valueOf).boxed().toArray(Integer[]::new);
         } catch (IOException e) {
             e.printStackTrace();
         }
         return arr;
     }
 
-    static void printArray(Integer[] arr) {
-        final String result = Arrays.stream(arr).map(x -> String.valueOf(x)).collect(Collectors.joining(" "));
+    void printArray(Integer[] arr) {
+        final String result = Arrays.stream(arr).map(String::valueOf).collect(Collectors.joining(", "));
         System.out.println(result);
     }
 
